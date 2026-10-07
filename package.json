@@ -1,25 +1,82 @@
 {
   "name": "cdk-spa-api-gateway",
   "version": "0.1.0",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
+  "description": "CDK construct that serves a single-page app from an API Gateway REST API: nonce and security headers on the HTML, S3 for static assets and a proxy for the backend API",
+  "keywords": [
+    "api-gateway",
+    "aws-cdk",
+    "cdk",
+    "construct",
+    "csp",
+    "nonce",
+    "s3",
+    "spa"
+  ],
+  "homepage": "https://github.com/justin-tay/cdk-spa-api-gateway#readme",
+  "bugs": {
+    "url": "https://github.com/justin-tay/cdk-spa-api-gateway/issues"
+  },
+  "license": "MIT",
+  "author": "Justin Tay",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/justin-tay/cdk-spa-api-gateway.git"
+  },
+  "files": [
+    "lib",
+    "docs"
+  ],
+  "main": "lib/constructs/index.js",
+  "types": "lib/constructs/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/constructs/index.d.ts",
+      "default": "./lib/constructs/index.js"
+    },
+    "./package.json": "./package.json"
+  },
   "scripts": {
-    "build": "tsc",
-    "watch": "tsc -w",
-    "test": "jest"
+    "build": "npm run build:lib && npm run build:lambda",
+    "build:lib": "tsc -p tsconfig.build.json",
+    "build:lambda": "esbuild src/assets/lambda/handlers/index-page.ts --bundle --external:@aws-sdk/* --platform=node --target=node24 --format=cjs --outfile=lib/assets/lambda/handlers/index-page/index.js",
+    "typecheck": "tsc -p tsconfig.json",
+    "pretest": "npm run build:lambda",
+    "test": "jest --coverage",
+    "clean": "node -e \"fs.rmSync('lib',{recursive:true,force:true})\"",
+    "prepack": "npm run clean && npm run typecheck && npm run build",
+    "cdk:synth": "npm run build && cdk synth",
+    "cdk:diff": "npm run build && cdk diff",
+    "cdk:deploy": "npm run build && cdk deploy",
+    "cdk:destroy": "cdk destroy",
+    "lint": "oxlint --type-aware --deny-warnings",
+    "lint:fix": "oxlint --type-aware --fix",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check"
   },
   "devDependencies": {
-    "@swc/core": "^1.15.0",
+    "@aws-sdk/client-s3": "^3.1140.0",
+    "@swc/core": "1.16.2",
     "@swc/jest": "^0.2.39",
+    "@types/aws-lambda": "^8.10.150",
     "@types/jest": "^30",
-    "@types/node": "^20.19.24",
-    "aws-cdk-lib": "^2.271.0",
+    "@types/node": "^22.20.4",
+    "aws-cdk": "2.1143.0",
+    "aws-cdk-lib": "^2.270.0",
+    "cdk-nag": "^3.0.2",
     "constructs": "^10.5.0",
+    "esbuild": "^0.28.2",
     "jest": "^30",
+    "oxfmt": "^0.70.0",
+    "oxlint": "^1.85.0",
+    "oxlint-tsgolint": "^7.0.2003",
+    "tsx": "4.23.15",
     "typescript": "~7.0.2"
   },
   "peerDependencies": {
-    "aws-cdk-lib": "^2.271.0",
+    "aws-cdk-lib": "^2.270.0",
     "constructs": "^10.5.0"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }
