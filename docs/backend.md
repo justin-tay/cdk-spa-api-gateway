@@ -71,4 +71,22 @@ spa.apiResource
   .addMethod('GET', new LambdaIntegration(jwksFunction)); // /api/v1/auth/jwks
 ```
 
-`apiAuthorizer` covers only the backend proxy. A route you add has no authorizer unless you pass one to `addMethod`, which is what you want for a public JWKS. The sample stack in [`bin/`](../bin/app-stack.ts) adds such a route.
+`apiAuthorizer` covers only the backend proxy. A route you add has no authorizer unless you pass one to `addMethod`, which is what you want for a public JWKS. The sample stack in [`bin/`](../bin/app-stack.ts) adds such a route; see below.
+
+### The JWKS sample
+
+By default the sample route is a placeholder that serves `{"keys":[]}` and creates nothing extra. Pass the secrets to serve and the route becomes a real endpoint (`bin/handlers/jwks-endpoint.ts`) that serves their public keys:
+
+```bash
+# one secret
+npx cdk deploy -c jwksSecretArns=arn:aws:secretsmanager:ap-southeast-1:123456789012:secret:sig-AbCdEf
+
+# several, comma-separated and with no spaces: their keys are served together
+npx cdk deploy -c jwksSecretArns=<sig secret arn>,<enc secret arn> -c jwksCacheSeconds=300
+```
+
+- **Use complete ARNs**, including the random suffix (`-AbCdEf`). A name or partial ARN gives an IAM policy that does not match the secret, and the endpoint fails with access denied. Get it with `aws secretsmanager describe-secret --secret-id <name> --query ARN --output text`, and use the region you deploy to.
+- **The endpoint's own role** may read each of those secrets (`secretsmanager:GetSecretValue`, `DescribeSecret`) and no others.
+- **A secret encrypted with a customer managed key** also needs `kms:Decrypt` on that key for the endpoint's role. The ARN does not say which key it is, so the sample does not grant it.
+- **`jwksCacheSeconds`** caches each secret in the function and sets `Cache-Control: public, max-age=<n>`. The default is `0`: no caching, and `no-cache`. An empty key set, as before the first rotation, is never cached.
+- The handler serves every `sig` key, drops the oldest `enc` key once there are three, and never serves a private member. It checks only that a secret is `{"keys":[...]}`; whatever writes the secret is responsible for the keys being valid.
